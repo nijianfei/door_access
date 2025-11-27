@@ -84,24 +84,21 @@ public class DoorController {
     /*9.	门禁卡权限查询（全部）*/
     @RequestMapping("perm_get_all")
     public Object permGetAll() {
-
-        return null;
+        return doorCmdService.permGetAll();
     }
 
 
     /*10.	门禁卡权限查询（指定门）*/
     @RequestMapping("perm_get_byIPandno")
-    public Object PermGetByIPandno(@RequestBody PermGetByIPandnoQuery query) {
-
-        return null;
+    public Object PermGetByIpAndNo(@RequestBody PermGetByIPandnoQuery query) {
+        return doorCmdService.PermGetByIpAndNo(query);
     }
 
 
     /*11.	门禁卡权限查询（指定卡）*/
     @RequestMapping("perm_get_bycardid")
-    public Object permGetBycardid(@RequestBody PermGetBycardidQuery query) {
-
-        return null;
+    public Object permGetByCardId(@RequestBody PermGetBycardidQuery query) {
+        return doorCmdService.permGetByCardId(query);
     }
 
     /*12 读头灯光反馈*/
@@ -111,7 +108,7 @@ public class DoorController {
         return BaseResult.success();
     }
 
-    /*12 读头灯光反馈*/
+    /*xx 设备搜索*/
     @RequestMapping("search_device")
     public Object searchDevice() {
         doorCmdService.searchDevice();

@@ -67,7 +67,7 @@ public class ScheduleConfig {
     }
 
     private static byte[] cmdCache = null;
-    @Scheduled(fixedRate = 2000) // 每5秒执行一次（单位：毫秒）
+//    @Scheduled(fixedRate = 2000) // 每5秒执行一次（单位：毫秒）
     public void sendBroadcastTask() {
         if (udpServer.isServerStart()) {
             if (cmdCache == null) {

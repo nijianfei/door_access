@@ -60,8 +60,8 @@ public class CmdBuildUtil {
             //
             case X20, XB4 -> {
             }
-            /*获取指定索引号的记录*/
-            case XB0 -> {
+            /*获取指定索引号的记录 ,指定索引读取权限, (支持1024指令)*/
+            case XB0, X5C -> {
                 System.arraycopy(longToByte(param.getRecordNo()), 0, cmdBuff, 8, 4);
             }
             /*设置已读取过记录的索引号*/
@@ -128,7 +128,7 @@ public class CmdBuildUtil {
                 cmdBuff[8] = 0 & 0xFF;
             }
 
-            /*顺序上传权限*/
+            /*顺序上传权限 (支持1024指令)*/
             case X56 -> {
                 /*约束:  权限按卡号的由小到大顺序排列, 指定总的权限数和当前权限的索引号(从1开始)
                 [此指令只能由某台PC单独完成从1到最后一条权限的下发操作. 不能由多台PC同时操作..]
@@ -144,6 +144,9 @@ public class CmdBuildUtil {
                 System.arraycopy(longToByte(0), 0, cmdBuff, 24, 3);
             }
 
+            case X98 ->{
+                cmdBuff[8] = (byte)(param.getRecordNo() & 0XFF);
+            }
             case XF2 -> {
                 System.arraycopy(flag, 0, cmdBuff, 8, 4);
                 String serverTimeOut = param.getServerTimeOut();

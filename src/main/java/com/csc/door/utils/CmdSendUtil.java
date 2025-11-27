@@ -188,16 +188,16 @@ public class CmdSendUtil {
         return instance(ip, 300, 30);
     }
 
-    public static CmdSendUtil instance(String ip, int timeout, int sleepTime) {
-        if (Objects.isNull(cache.get(ip))) {
+    public static CmdSendUtil instance(String targetIp, int timeout, int sleepTime) {
+        if (Objects.isNull(cache.get(targetIp))) {
             synchronized (CmdSendUtil.class) {
-                if (Objects.isNull(cache.get(ip))) {
-                    CmdSendUtil instance = new CmdSendUtil().CommOpen(ip, ControllerPort,"192.168.0.1");
-                    cache.put(ip, instance);
+                if (Objects.isNull(cache.get(targetIp))) {
+                    CmdSendUtil instance = new CmdSendUtil().CommOpen(targetIp, ControllerPort,"192.168.0.11");
+                    cache.put(targetIp, instance);
                 }
             }
         }
-        CmdSendUtil cmdSendUtil = cache.get(ip);
+        CmdSendUtil cmdSendUtil = cache.get(targetIp);
         cmdSendUtil.timeout = timeout;
         cmdSendUtil.sleepTime = sleepTime;
         return cmdSendUtil;

@@ -22,14 +22,15 @@ public class CmdParseUtil {
     }
 
     public static Map<String, Object> parseCmd(@NotNull FunctionCodeEnum fCode, @NotNull byte[] bytes) {
-        log.info("parseCmd-fuc[{}] HEX -> {}", fCode, CmdBuildUtil.bytesToHex(bytes));
+        String hexStr = CmdBuildUtil.bytesToHex(bytes);
+        log.info("parseCmd-fuc[{}] HEX -> {}", fCode, hexStr);
         Map<String, Object> temp = new HashMap<>();
         if (bytes == null) {
             return temp;
         }
         switch (fCode) {
             //返回状态 公用parse
-            case X40, XB2, X90 ,XA0 ,X8E -> {
+            case X40, XB2, X90, XA0, X8E -> {
                 boolean success = false;
                 if (CmdBuildUtil.getIntByByte(bytes[8]) == 1) {
                     success = true;
@@ -66,6 +67,21 @@ public class CmdParseUtil {
             case X20 -> {
                 parseControllerStatus(bytes, temp);
             }
+            /* 1.16	获取指定索引号的权限 */
+            case X5C -> {
+                temp.put("cardId", CmdBuildUtil.getLongByByte(bytes, 8, 4));
+                String dateStart = hexStr.substring(12 * 2, 12 * 2 + 4 * 2);
+                String dateEnd = hexStr.substring(16 * 2, 16 * 2 + 4 * 2);
+                temp.put("dateStart", dateStart);
+                temp.put("dateEnd", dateEnd);
+                int[] doorStatus = new int[4];
+                doorStatus[1 - 1] = CmdBuildUtil.getIntByByte(bytes[20]);
+                doorStatus[2 - 1] = CmdBuildUtil.getIntByByte(bytes[21]);
+                doorStatus[3 - 1] = CmdBuildUtil.getIntByByte(bytes[22]);
+                doorStatus[4 - 1] = CmdBuildUtil.getIntByByte(bytes[23]);
+                temp.put("doorPerm", doorStatus);
+            }
+
             //1.2	搜索控制器
             case X94 -> {
                 temp.put("sn", CmdBuildUtil.getLongByByte(bytes, 4, 4));
@@ -77,6 +93,30 @@ public class CmdParseUtil {
                 temp.put("mac", CmdBuildUtil.bytesToHex(tempBuff, 1, "-"));
                 temp.put("ver", CmdBuildUtil.bcdTDecode(bytes, 26, 2));
                 temp.put("verTime", CmdBuildUtil.bcdTDecode(bytes, 28, 4));
+            }
+
+            case X98 -> {
+                int index = CmdBuildUtil.getIntByByte(bytes[8]);
+                temp.put("index", index);
+                /*周六*/
+                int sat = CmdBuildUtil.getIntByByte(bytes[22]);
+                /*周日*/
+                int week = CmdBuildUtil.getIntByByte(bytes[23]);
+
+                String substring = hexStr.substring(24 * 2, 34 * 2 + 2 * 2);
+                String[] tz = new String[3];
+                int groupCount = substring.length() / 8;
+                for (int i = 0; i < groupCount; i++) {
+                    int gc = 2;
+                    String sub1 = substring.substring(i * 8, i * 8 + 8);
+                    String sFrom = String.join(":", sub1.substring(0, 0 + 2), sub1.substring(2, 2 + 2));
+                    String sTo = String.join(":", sub1.substring(4, 4 + 2), sub1.substring(6, 6 + 2));
+                    tz[i] = String.join("-", sFrom, sTo);
+                }
+
+                int nextIndex = CmdBuildUtil.getIntByByte(bytes[36]);
+                temp.put("nextIndex", nextIndex);
+                temp.put("tz", tz);
             }
             default -> throw new RuntimeException("不支持的FunctionCode");
         }

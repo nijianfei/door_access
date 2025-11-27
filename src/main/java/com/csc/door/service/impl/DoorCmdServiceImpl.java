@@ -10,13 +10,13 @@ import com.csc.door.dto.ControllerConfigsDto;
 import com.csc.door.enums.FunctionCodeEnum;
 import com.csc.door.enums.ResultStatusEnum;
 import com.csc.door.handler.UdpServerHandler;
+import com.csc.door.query.PermGetByIPandnoQuery;
+import com.csc.door.query.PermGetBycardidQuery;
 import com.csc.door.query.RecordDownloadQuery;
 import com.csc.door.request.DoorCntrRequest;
 import com.csc.door.request.DoorSetRequest;
 import com.csc.door.request.LightCntrRequest;
-import com.csc.door.response.AccessRecordResponse;
-import com.csc.door.response.ClockSyncResponse;
-import com.csc.door.response.ControllerStatusResponse;
+import com.csc.door.response.*;
 import com.csc.door.service.DoorCmdService;
 import com.csc.door.utils.CmdBuildUtil;
 import com.csc.door.utils.CmdParseUtil;
@@ -25,6 +25,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.time.DateFormatUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.Assert;
 
 import java.util.*;
 
@@ -129,13 +130,12 @@ public class DoorCmdServiceImpl implements DoorCmdService {
         return statusResponses;
     }
 
-    byte[] byte1024 = new byte[1024];
-
     @Override
     public Object accessRecord(RecordDownloadQuery query) {
         String recordDateFrom = query.getRecordDateFrom();
         String recordDateTo = query.getRecordDateTo();
         List<AccessRecordResponse> resultList = new ArrayList<>();
+        byte[] byte1024 = new byte[1024];
         for (ControllerConfigDto configDto : controllerConfigsDto.getControllers()) {
             long firstRecordIndex = 0;
             long lastRecordIndex = 0xffffffff;
@@ -148,14 +148,14 @@ public class DoorCmdServiceImpl implements DoorCmdService {
             log.info("SN[{}]已读取过的记录索引号:{}", configDto.getSn(), recordStartNo);
             Map<String, Object> resultMap1 = null;
             long startRecordIndex = recordStartNo + 1;
-            for (int i = 0; i < lastRecordNum-recordStartNo; i++) {
+            for (int i = 0; i < lastRecordNum - recordStartNo; i++) {
                 CmdParamDto param1 = CmdParamDto.builder().devSn(configDto.getSn()).recordNo(startRecordIndex + i).build();
                 byte[] cmd1 = CmdBuildUtil.buildCmd(FunctionCodeEnum.XB0, param1);
                 System.arraycopy(cmd1, 0, byte1024, i * 64, 64);
             }
             byte[] bytes1 = CmdSendUtil.instance(configDto.getIp()).sendCmd(byte1024);
             log.info("测试LOG:{}", CmdBuildUtil.bytesToHex(bytes1));
-            for (int i = 0; i < lastRecordNum-recordStartNo; i++) {
+            for (int i = 0; i < lastRecordNum - recordStartNo; i++) {
                 byte[] tempByte = new byte[64];
                 System.arraycopy(bytes1, i * 64, tempByte, 0, 64);
                 Map<String, Object> stringObjectMap = CmdParseUtil.parseCmd(FunctionCodeEnum.XB0, tempByte);
@@ -180,7 +180,7 @@ public class DoorCmdServiceImpl implements DoorCmdService {
 //                }
 //            } while (resultMap1 != null && !resultMap1.isEmpty());
 
-            saveReadRecordIndex(configDto, lastRecordNum-2);//TODO  -2 测试使用,上线需删除
+            saveReadRecordIndex(configDto, lastRecordNum - 2);//TODO  -2 测试使用,上线需删除
         }
         log.info("测试LOG_LIST:{}", JSONObject.toJSONString(resultList, JSONWriter.Feature.PrettyFormat));
         return resultList;
@@ -216,6 +216,81 @@ public class DoorCmdServiceImpl implements DoorCmdService {
     }
 
     @Override
+    public Object permGetAll() {
+        List<ControllerConfigDto> controllers = controllerConfigsDto.getControllers();
+
+        return null;
+    }
+
+    @Override
+    public Object PermGetByIpAndNo(PermGetByIPandnoQuery query) {
+        ControllerConfigDto configDto = controllerConfigsDto.get(query.getControllerIp());
+        Assert.notNull(configDto, String.format("%s不存在", query.getControllerIp()));
+        int controllerNo = Integer.parseInt(query.getControllerNo());
+        long cardId = 0;
+        long index = 1;
+        int batchCount = 16;
+        PermByIpAndNoResponse perm = PermByIpAndNoResponse.builder().controllerIp(query.getControllerIp())
+                .controllerNo(query.getControllerNo()).build();
+        do {
+            byte[] byte1024 = new byte[1024];
+            for (int i = 0; i < batchCount; i++) {
+                CmdParamDto param = CmdParamDto.builder().devSn(configDto.getSn()).doorNo(controllerNo).recordNo(index++).build();
+                byte[] cmd = CmdBuildUtil.buildCmd(FunctionCodeEnum.X5C, param);
+                System.arraycopy(cmd, 0, byte1024, i * 64, 64);
+            }
+            byte[] bytes = CmdSendUtil.instance(configDto.getIp()).sendCmd(byte1024);
+            for (int i = 0; i < batchCount; i++) {
+                byte[] tempByte = new byte[64];
+                System.arraycopy(bytes, i * 64, tempByte, 0, 64);
+                //解析结果
+                Map<String, Object> resultMap = CmdParseUtil.parseCmd(FunctionCodeEnum.X5C, tempByte);
+                log.info("FunctionCodeEnum.X5C_resultMap:{}",JSONObject.toJSONString(resultMap));
+                String cardIdStr = String.valueOf(resultMap.get("cardId"));
+                String dateStartStr = String.valueOf(resultMap.get("dateStart"));
+                String dateEndStr = String.valueOf(resultMap.get("dateEnd"));
+                int[] doorPerm = (int[])resultMap.get("doorPerm");
+                cardId = Long.parseLong(cardIdStr);
+                //此索引没有权限,索引之后也不会有权限
+                if (cardId == 0) {
+                    break;
+                }
+
+                //0XFFFFFFFF 被删除了
+                if (cardId == 0XFFFFFFFF || doorPerm[controllerNo] == 0) {
+                    continue;
+                }
+
+                CardPermTime build = CardPermTime.builder().build();
+
+            }
+
+        } while (cardId != 0);
+
+        index = 2;
+        CmdParamDto param = CmdParamDto.builder().devSn(configDto.getSn()).doorNo(controllerNo).recordNo(index++).build();
+        byte[] cmd = CmdBuildUtil.buildCmd(FunctionCodeEnum.X98, param);
+        byte[] bytes = CmdSendUtil.instance(configDto.getIp()).sendCmd(cmd);
+        //解析 时段读取结果
+        Map<String, Object> stringObjectMap = CmdParseUtil.parseCmd(FunctionCodeEnum.X98, bytes);
+        log.info("FunctionCodeEnum.X98_resultMap:{}",JSONObject.toJSONString(stringObjectMap));
+//        for (PermByIpAndNoResponse permByIpAndNoResponse : resultList) {
+
+//            CardPermTime build = CardPermTime.builder().permitTimeFrom().permitTimeTo().weekendLimitCls().cardIdList().build();
+//        }
+//        perm.getCardpermTimeList().add();
+        return perm;
+    }
+
+    @Override
+    public Object permGetByCardId(PermGetBycardidQuery query) {
+        String cardId = query.getCardId();
+        List<ControllerConfigDto> controllers = controllerConfigsDto.getControllers();
+
+        return null;
+    }
+
+    @Override
     public void lightCntr(List<LightCntrRequest> requests) {
         for (LightCntrRequest lightCntrRequest : requests) {
             log.info("lightCntr-Start");
@@ -235,9 +310,10 @@ public class DoorCmdServiceImpl implements DoorCmdService {
         configDevice(maps);
     }
 
-    public void initDevice(){
+    public void initDevice() {
 
     }
+
     public void configDevice(List<Map<String, Object>> maps) {
         List<ControllerConfigDto> byServerIdente = controllerConfigDao.findByServerIdente();
         log.info("控制器DB 配置列表:{}", JSONObject.toJSONString(byServerIdente));

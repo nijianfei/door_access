@@ -1,6 +1,6 @@
 mina:
   server:
-    ip: 192.168.0.1    # 监听指定 IP
+    ip: 192.168.0.11    # 监听指定 IP
     port: 61005           # 监听端口
     boss-threads: 4      # Acceptor 线程数（建议 = CPU核心数）
     worker-core-threads: 8    # Worker 线程数（建议 = CPU核心数×2）
@@ -8,12 +8,12 @@ mina:
     idle-timeout: 60     # 空闲超时（秒）
     buffer-size: 2048    # 读写缓冲区大小
 core-server:
-  url: http://192.168.0.1:27022
+  url: http://192.168.0.11:27022
 
 local-server:
-  url: http://192.168.0.1:27022
+  url: http://192.168.0.11:27022
   node:
-    ident: http://192.168.0.1:27022/
+    ident: http://192.168.0.11:27022/
   sql: select * from ac_cntrl..控制器表 where 节点标识 = '%s'
 
 spring:

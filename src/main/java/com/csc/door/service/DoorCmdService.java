@@ -1,5 +1,7 @@
 package com.csc.door.service;
 
+import com.csc.door.query.PermGetByIPandnoQuery;
+import com.csc.door.query.PermGetBycardidQuery;
 import com.csc.door.query.RecordDownloadQuery;
 import com.csc.door.request.DoorCntrRequest;
 import com.csc.door.request.DoorSetRequest;
@@ -19,8 +21,16 @@ public interface DoorCmdService {
 
     Object accessRecord(RecordDownloadQuery query);
 
+
+    Object permGetAll();
+
+    Object PermGetByIpAndNo(PermGetByIPandnoQuery query);
+
+    Object permGetByCardId(PermGetBycardidQuery query);
+
     void lightCntr(List<LightCntrRequest> requests);
 
 
     void searchDevice();
+
 }
